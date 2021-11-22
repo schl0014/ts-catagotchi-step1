@@ -1,6 +1,23 @@
 class Catagotchi {
+  alive: boolean;
 
-  private lastTickTimeStamp : number;
+  mood: number;
+
+  energy: number;
+
+  hunger: number;
+
+  gameDOM: Element;
+
+  displayMood: HTMLDivElement;
+
+  displayHunger: HTMLDivElement;
+
+  displayStatus: HTMLDivElement;
+
+  displayEnergy: HTMLDivElement;
+
+  private lastTickTimeStamp: number;
 
   /**
    * Creates the Catagotchi game. Sets all of the attributes of the
@@ -10,16 +27,111 @@ class Catagotchi {
    *
    * @param gameDOM pass the DOM element where the game will run.
    */
-  constructor(gameDOM : Element) {
+  constructor(gameDOM: Element) {
+    this.mood = 10;
+    this.alive = true;
+    this.hunger = 0;
+    this.energy = 10;
     this.startRunning();
+    this.feed();
+    this.play();
+    this.sleep();
+    // this.meow();
+    this.catDead();
+    this.getDOMElements();
+    this.updateDisplays();
+  }
+
+  feed(): void {
+    // console.log("test");
+    if (this.hunger <= 10 && this.hunger > 0) {
+      this.hunger -= 1;
+    }
+  }
+
+  play(): void {
+    if (this.mood < 10 && this.hunger <= 10 && this.energy < 10) {
+      this.meow();
+      this.mood += 1;
+      this.hunger += 1;
+      this.energy -= 1;
+    }
+  }
+
+  sleep(): void {
+    if (this.energy < 10 && this.hunger <= 10) {
+      this.energy += 1;
+      this.hunger += 1;
+    }
+  }
+
+  meow(): void {
+    let audio = new Audio('./nyan.mp3');
+    audio.play();
+    console.log('nyan nyan');
+  }
+
+  catDead(): void {
+    if (this.hunger >= 10 || this.energy <= 0) {
+      const game = document.getElementById('game');
+      game.remove();
+      const body = document.querySelector('body');
+      const dood = document.createElement('div');
+      dood.className = 'dood';
+      document.body.style.background = 'red';
+      body.append(dood);
+      const tekstDood = document.createElement('h1');
+      tekstDood.innerHTML = 'you are dead';
+      tekstDood.style.textAlign = 'center';
+      console.log(dood);
+      dood.appendChild(tekstDood);
+      console.log('dead');
+      //   this.meow();
+    }
   }
 
   /**
    * Called for every game tick.
    */
   public gameTick() {
-
+    if (this.hunger < 10 && this.energy > 0) {
+      this.hunger += 1;
+      this.mood -= 1;
+      this.energy -= 1;
+      this.updateDisplays();
+      this.catDead();
+    }
   }
+
+  updateDisplays = () => {
+    this.displayEnergy.innerHTML = String(this.energy);
+    this.displayHunger.innerHTML = String(this.hunger);
+    this.displayMood.innerHTML = String(this.mood);
+  };
+
+  getDOMElements = () => {
+    this.displayHunger = document.querySelector('#displayHunger');
+    this.displayMood = document.querySelector('#displayMood');
+    this.displayEnergy = document.querySelector('#displayEnergy');
+    // console.log(this.displayHunger);
+    let buttons = document.querySelectorAll('.button');
+    for (let i = 0; i < buttons.length; i++) {
+      this.gameDOM = buttons[i];
+      // console.log(this.gameDOM);
+      this.gameDOM.addEventListener('click', () => {
+        if (i === 0) {
+          this.feed();
+        } else if (i === 1) {
+          // console.log("test1");
+          this.play();
+        } else {
+          // console.log("test2");
+          this.sleep();
+        }
+        this.updateDisplays();
+      });
+    }
+  };
 
   /**
    * Start the automatic updating process of this object
