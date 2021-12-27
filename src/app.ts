@@ -1,92 +1,82 @@
-class Catagotchi {
-  alive: boolean;
+import Cat from './Cat.js';
+import KeyListener from './KeyListener.js';
+import Ticker from './ticker.js';
 
-  mood: number;
+export default class Catagotchi {
+  private cat: Cat;
 
-  energy: number;
+  private keyListener: KeyListener;
 
-  hunger: number;
+  private trueorFalse: boolean;
 
-  gameDOM: Element;
+  public readonly canvas: HTMLCanvasElement;
 
-  displayMood: HTMLDivElement;
+  private readonly ctx: CanvasRenderingContext2D;
 
-  displayHunger: HTMLDivElement;
+  private background: HTMLImageElement;
 
-  displayStatus: HTMLDivElement;
-
-  displayEnergy: HTMLDivElement;
-
-  private lastTickTimeStamp: number;
+  private ticker: Ticker;
 
   /**
    * Creates the Catagotchi game. Sets all of the attributes of the
    * cat (mood, hunger, sleep, aliveness) to their default states.
    * Once set, the DOM elements will be gathered and updated.
    * Finally, the cat will meow to indicate that it is indeed alive!
-   *
-   * @param gameDOM pass the DOM element where the game will run.
+   * @param canvas pass the DOM element where the game will run.
    */
-  constructor(gameDOM: Element) {
-    this.mood = 10;
-    this.alive = true;
-    this.hunger = 0;
-    this.energy = 10;
-    this.startRunning();
-    this.feed();
-    this.play();
-    this.sleep();
+  constructor(canvas: HTMLCanvasElement) {
+    this.ticker = new Ticker(this);
+    this.canvas = canvas;
+    this.ctx = this.canvas.getContext('2d');
+
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+    this.keyListener = new KeyListener();
+    this.cat = new Cat();
     // this.meow();
-    this.catDead();
-    this.getDOMElements();
+    this.checkCatDead();
+    this.trueorFalse = true;
+    this.background = this.loadNewImage('img/normal Cat.png');
     this.updateDisplays();
+    this.ticker.startRunning();
   }
 
-  feed(): void {
-    // console.log("test");
-    if (this.hunger <= 10 && this.hunger > 0) {
-      this.hunger -= 1;
-    }
+  /**
+  * Removes all painted things from the canvas. Starts at the top-left pixel
+  * of the canvas and stops at the bottom-right pixel.
+  */
+  private clearScreen() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  play(): void {
-    if (this.mood < 10 && this.hunger <= 10 && this.energy < 10) {
-      this.meow();
-      this.mood += 1;
-      this.hunger += 1;
-      this.energy -= 1;
-    }
+  private updateDisplays() {
+    this.clearScreen();
+
+    this.ctx.drawImage(
+      this.background,
+      100,
+      100,
+      this.background.width,
+      this.canvas.height / 2,
+    );
+
+    this.writeTextToCanvas(`Energy:${this.cat.getEnergy()}`, 100, 100);
+    this.writeTextToCanvas(`Hunger:${this.cat.getHunger()}`, 300, 100);
+    this.writeTextToCanvas(`Mood:${this.cat.getMood()}`, 500, 100);
   }
 
-  sleep(): void {
-    if (this.energy < 10 && this.hunger <= 10) {
-      this.energy += 1;
-      this.hunger += 1;
-    }
-  }
-
-  meow(): void {
-    let audio = new Audio('./nyan.mp3');
-    audio.play();
-    console.log('nyan nyan');
-  }
-
-  catDead(): void {
-    if (this.hunger >= 10 || this.energy <= 0) {
-      const game = document.getElementById('game');
-      game.remove();
-      const body = document.querySelector('body');
-      const dood = document.createElement('div');
-      dood.className = 'dood';
-      document.body.style.background = 'red';
-      body.append(dood);
-      const tekstDood = document.createElement('h1');
-      tekstDood.innerHTML = 'you are dead';
-      tekstDood.style.textAlign = 'center';
-      console.log(dood);
-      dood.appendChild(tekstDood);
-      console.log('dead');
-      //   this.meow();
+  /**
+   * checkes if cat is dead or not
+   */
+  checkCatDead(): void {
+    // console.log(this.trueorFalse);
+    if (this.trueorFalse) {
+      if (this.cat.hunger >= 10 || this.cat.energy <= 0) {
+        this.background = this.loadNewImage('img/Dead Cat.png');
+        this.trueorFalse = false;
+      } else {
+        this.background = this.loadNewImage('img/normal Cat.png');
+      }
     }
   }
 
@@ -94,78 +84,68 @@ class Catagotchi {
    * Called for every game tick.
    */
   public gameTick() {
-    if (this.hunger < 10 && this.energy > 0) {
-      this.hunger += 1;
-      this.mood -= 1;
-      this.energy -= 1;
-      this.updateDisplays();
-      this.catDead();
+    if (this.cat.hunger <= 10 || this.cat.energy >= 0) {
+      this.cat.ignore();
+
+      if (this.keyListener.isKeyDown(KeyListener.KEY_F)) {
+        this.background = this.loadNewImage('img/Grumpy Cat.png');
+        this.cat.feed();
+        console.log('test');
+      } else if (this.keyListener.isKeyDown(KeyListener.KEY_P)) {
+        this.background = this.loadNewImage('img/Happy Cat.png');
+        // console.log('test1');
+        this.cat.play();
+      } else if (this.keyListener.isKeyDown(KeyListener.KEY_S) && this.cat.mood >= 0) {
+        // console.log('test2');
+        this.background = this.loadNewImage('img/Sleepy Cat.png');
+        this.cat.sleep();
+      } else {
+        this.checkCatDead();
+      }
     }
-  }
-
-  updateDisplays = () => {
-    this.displayEnergy.innerHTML = String(this.energy);
-    this.displayHunger.innerHTML = String(this.hunger);
-    this.displayMood.innerHTML = String(this.mood);
-  };
-
-  getDOMElements = () => {
-    this.displayHunger = document.querySelector('#displayHunger');
-    this.displayMood = document.querySelector('#displayMood');
-    this.displayEnergy = document.querySelector('#displayEnergy');
-    // console.log(this.displayHunger);
-    let buttons = document.querySelectorAll('.button');
-    for (let i = 0; i < buttons.length; i++) {
-      this.gameDOM = buttons[i];
-      // console.log(this.gameDOM);
-      this.gameDOM.addEventListener('click', () => {
-        if (i === 0) {
-          this.feed();
-        } else if (i === 1) {
-          // console.log("test1");
-          this.play();
-        } else {
-          // console.log("test2");
-          this.sleep();
-        }
-        this.updateDisplays();
-      });
-    }
-  };
-
-  /**
-   * Start the automatic updating process of this object
-   */
-  private startRunning() {
-    // Set the last tick timestamp to current time
-    this.lastTickTimeStamp = performance.now();
-    // Request the browser to call the step method on next animation frame
-    requestAnimationFrame(this.step);
+    this.updateDisplays();
   }
 
   /**
-   * This MUST be an arrow method in order to keep the `this` variable working
-   * correctly. It will otherwise be overwritten by another object caused by
-   * javascript scoping behaviour.
+   * Write text to the canvas
    *
-   * @param timestamp a `DOMHighResTimeStamp` similar to the one returned by
-   *   `performance.now()`, indicating the point in time when `requestAnimationFrame()`
-   *   starts to execute callback functions
+   * @param text Text to write
+   * @param xCoordinate Horizontal coordinate in pixels
+   * @param yCoordinate Vertical coordinate in pixels
+   * @param fontSize Font size in pixels
+   * @param color The color of the text
+   * @param alignment Where to align the text
    */
-  private step = (timestamp: number) => {
-    // Check if it is time to perform the next Tick
-    if (timestamp - this.lastTickTimeStamp >= 3000) {
-      // Call the method of this object that needs to be called
-      this.gameTick();
-      this.lastTickTimeStamp = timestamp;
-    }
-    // Request the browser to call the step method on next animation frame
-    requestAnimationFrame(this.step);
-  };
+
+  private writeTextToCanvas(
+    text: string,
+    xCoordinate: number,
+    yCoordinate: number,
+    fontSize = 20,
+    color = 'red',
+    alignment: CanvasTextAlign = 'center',
+  ) {
+    this.ctx.font = `${fontSize}px sans-serif`;
+    this.ctx.fillStyle = color;
+    this.ctx.textAlign = alignment;
+    this.ctx.fillText(text, xCoordinate, yCoordinate);
+  }
+  /**
+   * loads an image in such a way that the screen doens't constantly flicker
+   *
+   * @param source Path to the image file to be loaded
+   * @returns An image element
+   */
+
+  private loadNewImage(source: string): HTMLImageElement {
+    const img = new Image();
+    img.src = source;
+    return img;
+  }
 }
 
 const init = () => {
-  const catGame = new Catagotchi(document.querySelector('#game'));
+  const catGame = new Catagotchi(document.querySelector('#canvas'));
 };
 
 window.addEventListener('load', init);
